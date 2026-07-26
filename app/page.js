@@ -1,3 +1,11 @@
+const [search, setSearch] = useState('')
+// <SearchBar onSearch={setSearch} />
+const searched = search
+  ? filteredProperties.filter(p =>
+      p.area?.toLowerCase().includes(search.toLowerCase()) || p.city?.toLowerCase().includes(search.toLowerCase())
+    )
+  : filteredProperties
+
 async function payAndUnlock(type, id) {
   setPaying(true)
   try {
