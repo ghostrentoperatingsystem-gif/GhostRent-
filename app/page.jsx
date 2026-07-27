@@ -1,21 +1,27 @@
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 
-export async function GET(request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const redirectTo = searchParams.get("redirectTo") || "/";
+const HUB_HOME = {
+  tenant: "/tenant",
+  landlord: "/landlord",
+  buyer: "/buyer",
+};
 
-  if (code) {
-    const supabase = createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+export default async function HomePage() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    if (!error) {
-      return NextResponse.redirect(`${origin}${redirectTo}`);
-    }
-  }
+  if (!user) redirect("/login");
 
-  return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent("Login link is invalid or expired.")}`
-  );
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.role) redirect("/choose-hub");
+
+  redirect(HUB_HOME[profile.role] || "/choose-hub");
 }
