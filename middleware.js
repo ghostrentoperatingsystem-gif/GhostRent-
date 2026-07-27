@@ -1,39 +1,74 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { NextResponse } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse } from "next/server";
 
-export async function middleware(req) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+];
 
-  const { data: { session } } = await supabase.auth.getSession()
-  const path = req.nextUrl.pathname
-  const protectedPaths = ['/admin', '/profile', '/post']
-  const isProtected = protectedPaths.some((p) => path.startsWith(p))
+export async function middleware(request) {
+  let response = NextResponse.next({ request: { headers: request.headers } });
 
-  if (isProtected && !session) {
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/'
-    redirectUrl.searchParams.set('login_required', '1')
-    return NextResponse.redirect(redirectUrl)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name, value, options) {
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          response.cookies.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = request.nextUrl.pathname;
+  const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
+
+  if (!user && !isPublic) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirectTo", path);
+    return NextResponse.redirect(url);
   }
 
-  if (path.startsWith('/admin') && session) {
+  if (user && !isPublic && path !== "/choose-hub") {
     const { data: profile } = await supabase
-      .from('users')
-      .select('is_admin')
-      .eq('id', session.user.id)
-      .single()
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
 
-    if (!profile?.is_admin) {
-      const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = '/'
-      return NextResponse.redirect(redirectUrl)
+    if (profile && !profile.role) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/choose-hub";
+      return NextResponse.redirect(url);
     }
   }
 
-  return res
+  if (user && isPublic && path !== "/auth/callback") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/profile/:path*', '/post/:path*'],
-}
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
