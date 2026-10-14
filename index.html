@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GhostRent OS - Tenant Hub</title>
+<style>
+  :root {
+    --navy: #0a1f5c;
+    --royal: #1a6cff;
+    --pale: #e8f0ff;
+    --bg: #f5f7fb;
+    --text: #0a1f5c;
+    --muted: #5a6a8a;
+    --green: #1e8e3e;
+    --red: #e11d48;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 72px; }
+
+  header { background: #fff; position: sticky; top: 0; z-index: 10; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e3e8f2; }
+  .brand { text-align: center; }
+  .brand strong { color: var(--navy); font-size: 17px; }
+  .brand span { color: var(--royal); font-weight: 600; }
+  .brand small { display: block; color: var(--muted); font-size: 12px; }
+  button { background: none; border: none; cursor: pointer; font-size: 22px; color: var(--navy); min-width: 44px; min-height: 44px; }
+  .bell { position: relative; }
+  .bell .dot { position: absolute; top: 8px; right: 8px; width: 9px; height: 9px; background: var(--red); border-radius: 50%; }
+
+  .search { margin: 14px 16px; position: relative; }
+  .search input { width: 100%; padding: 13px 40px 13px 14px; border: 1px solid #d5ddec; border-radius: 12px; font-size: 15px; background: #fff; }
+  .search button { position: absolute; right: 0; top: 0; font-size: 16px; min-width: 44px; min-height: 48px; }
+
+  .banner { margin: 0 16px 18px; background: linear-gradient(135deg, var(--navy), var(--royal)); color: #fff; border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .banner p { font-size: 13px; opacity: .9; margin-top: 4px; }
+  .banner .plus { background: #fff; color: var(--royal); border-radius: 50%; width: 44px; height: 44px; font-size: 26px; display: flex; align-items: center; justify-content: center; }
+
+  h2 { font-size: 17px; margin: 0 16px 10px; }
+  .feed { display: grid; gap: 14px; padding: 0 16px; }
+  .card { background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e3e8f2; cursor: pointer; }
+  .card .img { height: 150px; background: var(--pale); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; position: relative; }
+  .badge { position: absolute; top: 10px; left: 10px; background: var(--royal); color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 20px; }
+  .card .body { padding: 12px 14px 14px; }
+  .price { font-size: 18px; font-weight: 700; }
+  .price small { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .title { font-size: 15px; margin-top: 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .status { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--green); background: #e6f6ea; padding: 3px 10px; border-radius: 20px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 16px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(10,31,92,.45); display: none; z-index: 20; }
+  .overlay.open { display: block; }
+  .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 80%; max-width: 320px; background: #fff; transform: translateX(-100%); transition: transform .2s; z-index: 30; overflow-y: auto; }
+  .drawer.open { transform: translateX(0); }
+  .drawer .head { background: var(--navy); color: #fff; padding: 22px 18px; }
+  .drawer .head strong { font-size: 18px; }
+  .drawer .head small { display: block; opacity: .8; font-size: 12px; margin-top: 4px; }
+  .drawer a { display: block; padding: 15px 18px; color: var(--text); text-decoration: none; border-bottom: 1px solid #eef2f8; font-size: 15px; }
+  .drawer a.active { background: var(--pale); color: var(--royal); font-weight: 600; }
+  .drawer .section { padding: 14px 18px 4px; color: var(--muted); font-size: 13px; }
+  .drawer .version { padding: 18px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e3e8f2; display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+  nav a { font-size: 12px; color: var(--muted); text-decoration: none; text-align: center; min-width: 56px; }
+  nav a.active { color: var(--royal); font-weight: 600; }
+  nav .ic { display: block; font-size: 20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <button aria-label="Open menu" id="menuBtn">&#9776;</button>
+  <div class="brand">
+    <strong>GHOSTRENT <span>OS</span></strong>
+    <small>Tenant Hub</small>
+  </div>
+  <button class="bell" aria-label="Notifications"><span>&#128276;</span><span class="dot"></span></button>
+</header>
+
+<div class="search">
+  <input id="q" type="search" placeholder="Search by suburb, area, city or province..." aria-label="Search">
+  <button aria-label="Search" id="searchBtn">&#128269;</button>
+</div>
+
+<div class="banner">
+  <div>
+    <strong>Find My Match</strong>
+    <p>Tell us what you're looking for and we'll match you with suitable properties.</p>
+  </div>
+  <button class="plus" aria-label="Create rental request">+</button>
+</div>
+
+<h2>Featured Properties</h2>
+<div class="feed" id="feed"></div>
+
+<!-- Side drawer -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="head">
+    <strong>GHOSTRENT <span>OS</span></strong>
+    <small>Tenant Hub - Find Your Place. Find Your Tenant.</small>
+  </div>
+  <a href="#" class="active">GhostRent<br><small>Main Feed</small></a>
+  <a href="#">Matches<br><small>Find Your Match</small></a>
+  <div class="section">Settings</div>
+  <a href="#">Get Help</a>
+  <a href="#">Personal Information</a>
+  <a href="#">Payments</a>
+  <a href="#">Notifications</a>
+  <a href="#">Privacy</a>
+  <a href="#">Login &amp; Security</a>
+  <div class="version">Version 0.1.0</div>
+</aside>
+
+<nav>
+  <a href="#" class="active"><span class="ic">&#8962;</span>Explore</a>
+  <a href="#"><span class="ic">&#9825;</span>Favourites</a>
+  <a href="#"><span class="ic">&#9678;</span>Match</a>
+  <a href="#"><span class="ic">&#128488;</span>Messages</a>
+  <a href="#"><span class="ic">&#9786;</span>Profile</a>
+</nav>
+
+<script>
+  // SEED DATA ONLY - replace with a Supabase query to approved, published listings.
+  const seedListings = [
+    { id: 1, title: "Modern 2 Bedroom Apartment", price: 4500, suburb: "Rustenburg, North West", beds: 2, baths: 1, parking: 1, furnished: true, available: true },
+    { id: 2, title: "Family House with Garden", price: 8200, suburb: "Brooklyn, Pretoria", beds: 3, baths: 2, parking: 2, furnished: false, available: true }
+  ];
+
+  const feed = document.getElementById("feed");
+
+  function render(listings) {
+    if (!listings.length) {
+      feed.innerHTML = '<div class="empty">No properties match your search yet.</div>';
+      return;
+    }
+    feed.innerHTML = listings.map(p => `
+      <div class="card" tabindex="0">
+        <div class="img"><span class="badge">For Rent</span>Photo placeholder</div>
+        <div class="body">
+          <div class="price">R${p.price.toLocaleString("en-ZA")} <small>/ month</small></div>
+          <div class="title">${p.title}</div>
+          <div class="meta">${p.suburb}</div>
+          <div class="meta">${p.beds} beds &middot; ${p.baths} bath &middot; ${p.parking} parking &middot; ${p.furnished ? "Furnished" : "Unfurnished"}</div>
+          ${p.available ? '<span class="status">Available now</span>' : ""}
+        </div>
+      </div>`).join("");
+  }
+
+  function search() {
+    const term = document.getElementById("q").value.trim().toLowerCase();
+    render(seedListings.filter(p => !term || p.suburb.toLowerCase().includes(term)));
+  }
+
+  document.getElementById("searchBtn").addEventListener("click", search);
+  document.getElementById("q").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+
+  // Drawer
+  const drawer = document.getElementById("drawer");
+  const overlay = document.getElementById("overlay");
+  function setDrawer(open) {
+    drawer.classList.toggle("open", open);
+    overlay.classList.toggle("open", open);
+    drawer.setAttribute("aria-hidden", String(!open));
+  }
+  document.getElementById("menuBtn").addEventListener("click", () => setDrawer(true));
+  overlay.addEventListener("click", () => setDrawer(false));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") setDrawer(false); });
+
+  render(seedListings);
+</script>
+</body>
+</html>
